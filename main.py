@@ -13,15 +13,30 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="OnWatch - Flood Alert USSD System",
+    description="USSD-based flood risk alerts and emergency reporting for Nigeria, Ghana, and Cameroon.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 @app.get("/")
 def home():
-    return {"message": "OnWatch USSD backend live"}
+    return {
+        "message": "OnWatch USSD Flood Alert System is live 🌧️🚨",
+        "ussd_callback": "/ussd (POST → plain text)",
+        "docs": "/docs",
+        "status": "operational"
+    }
 
 
-# THIS IS THE CRITICAL ENDPOINT
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "OnWatch USSD"}
+
+
+# USSD Callback — returns plain text for Africa's Talking
 @app.post("/ussd")
 async def ussd_endpoint(
     sessionId: str = Form(...),
@@ -36,4 +51,4 @@ async def ussd_endpoint(
         "serviceCode": serviceCode,
     }
     response_text = await ussd_handler(payload)
-    return PlainTextResponse(response_text)  # ← Plain text, no JSON!
+    return PlainTextResponse(response_text)

@@ -24,11 +24,20 @@ def resolve_language(country: str, session_lang: str | None) -> str:
 
 
 def build_city_menu(country: str, lang: str) -> str:
-    if country == "nigeria":
-        return MESSAGES["choose_city"]["pidgin"]
-    if country == "ghana":
-        return MESSAGES["choose_city"]["english_gh"]
-    return MESSAGES["choose_city"]["french"] if lang == "french" else MESSAGES["choose_city"]["english_cm"]
+    cities = list(CITIES[country].keys())
+    lines = []
+    if lang == "french":
+        lines.append("Choisissez votre ville :")
+    else:
+        lines.append("Choose your city:")
+    
+    for i, city in enumerate(cities, 1):
+        lines.append(f"{i}. {city}")
+    
+    back_text = "Retour" if lang == "french" else "Back"
+    lines.append(f"99. {back_text}")
+    
+    return "\n".join(lines)
 
 
 async def ussd_handler(payload: dict) -> str:
@@ -40,40 +49,50 @@ async def ussd_handler(payload: dict) -> str:
         return "END Service unavailable. Try again later."
 
     country = detect_country(phone)
-    if text == "":
+
+    # Reset on first interaction or 99
+    if text == "" or text == "99":
         reset_ussd_session(session_id, phone, country)
 
     session = get_ussd_session(session_id, phone, country)
     lang = resolve_language(country, session.lang)
 
-    # Start
+    # Welcome / Start
     if session.step == "start":
         welcome_key = "pidgin" if lang == "pidgin" else "english"
-        session.step = "choose_lang" if country == "cameroon" else "choose_city"
+        if country == "cameroon":
+            session.step = "choose_lang"
+        else:
+            session.step = "choose_city"
         update_ussd_session(session)
         return "CON " + MESSAGES["welcome"][welcome_key]
 
-    # Language selection (Cameroon)
+    # Cameroon Language Selection
     if session.step == "choose_lang":
-        if text in ["1", "2"]:
-            session.lang = "french" if text == "1" else "english"
-            session.step = "choose_city"
-            update_ussd_session(session)
-            return "CON " + build_city_menu(country, session.lang)
-        return "CON " + MESSAGES["choose_lang"]["french"]
+        if text == "1":
+            session.lang = "french"
+        elif text == "2":
+            session.lang = "english"
+        else:
+            return "CON " + MESSAGES["choose_lang"]["french"]
 
-    # City selection
+        session.step = "choose_city"
+        update_ussd_session(session)
+        return "CON " + build_city_menu(country, session.lang)
+
+    # City Selection (All Countries)
     if session.step == "choose_city":
         if text == "99":
             reset_ussd_session(session_id, phone, country)
             return "CON " + MESSAGES["welcome"]["pidgin" if lang == "pidgin" else "english"]
 
-        if not text.isdigit() or not (1 <= int(text) <= 2):
+        if not text.isdigit() or not (1 <= int(text) <= len(CITIES[country])):
             return "CON " + build_city_menu(country, lang)
 
         city_idx = int(text) - 1
         city = list(CITIES[country].keys())[city_idx]
         lat, lon = CITIES[country][city]
+
         risk = await get_flood_risk(lat, lon)
 
         session.selected_city = city
@@ -82,16 +101,17 @@ async def ussd_handler(payload: dict) -> str:
         update_ussd_session(session)
 
         risk_msg = MESSAGES[f"risk_{risk}"][lang]
-        menu = MESSAGES["post_risk_menu"][lang]
+        post_menu = MESSAGES["post_risk_menu"][lang]
 
+        # Send high alert SMS only once
         if risk == "high" and not getattr(session, "alert_sent", False):
-            await send_sms_alert("+" + phone, f"⚠️ FLOOD ALERT ({city})\n{risk_msg}")
+            await send_sms_alert("+" + phone, f"⚠️ HIGH FLOOD ALERT in {city}\n{risk_msg}")
             session.alert_sent = True
             update_ussd_session(session)
 
-        return "CON " + risk_msg + "\n\n" + menu
+        return "CON " + risk_msg + "\n\n" + post_menu
 
-    # Post-risk menu
+    # Post-Risk: I am in danger
     if session.step == "post_risk":
         if text == "1":
             log_emergency_alert(

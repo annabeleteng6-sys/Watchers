@@ -1,7 +1,28 @@
+# utils/constants.py
+
+# 5 major/flood-prone cities per country with coordinates (lat, lon)
 CITIES = {
-    "nigeria": {"Lagos": (6.5244, 3.3792), "Abuja": (9.0765, 7.3986)},
-    "ghana": {"Accra": (5.6037, -0.1870), "Kumasi": (6.6666, -1.6163)},
-    "cameroon": {"Yaoundé": (3.8667, 11.5167), "Douala": (4.0511, 9.7679)},
+    "nigeria": {
+        "Lagos": (6.5244, 3.3792),
+        "Abuja": (9.0765, 7.3986),
+        "Port Harcourt": (4.8156, 7.0498),
+        "Yenagoa": (4.9267, 6.2676),
+        "Lokoja": (7.8024, 6.7430),
+    },
+    "ghana": {
+        "Accra": (5.6037, -0.1870),
+        "Kumasi": (6.6666, -1.6163),
+        "Ho": (6.6119, 0.4705),
+        "Tamale": (9.4034, -0.8393),
+        "Bolgatanga": (10.7856, -0.8514),
+    },
+    "cameroon": {
+        "Yaoundé": (3.8667, 11.5167),
+        "Douala": (4.0511, 9.7679),
+        "Maroua": (10.5910, 14.3159),
+        "Garoua": (9.3016, 13.3934),
+        "Kousséri": (12.0769, 15.0306),
+    },
 }
 
 PREFIXES = {
@@ -9,6 +30,14 @@ PREFIXES = {
     "233": "ghana",
     "237": "cameroon",
 }
+
+# Helper to dynamically build city menu with numbers
+def build_city_menu_text(cities: dict, lang: str = "english") -> str:
+    lines = ["Choose your city:" if lang != "french" else "Choisissez votre ville :"]
+    for i, city in enumerate(cities.keys(), 1):
+        lines.append(f"{i}. {city}")
+    lines.append("99. Back" if lang != "french" else "99. Retour")
+    return "\n".join(lines)
 
 MESSAGES = {
     "welcome": {
@@ -19,12 +48,8 @@ MESSAGES = {
     "choose_lang": {
         "french": "Choisissez la langue :\n1. Français\n2. English",
     },
-    "choose_city": {
-        "pidgin": "Choose city:\n1. Lagos\n2. Abuja\n99. Back",
-        "english_gh": "Choose city:\n1. Accra\n2. Kumasi\n99. Back",
-        "english_cm": "Choose city:\n1. Yaoundé\n2. Douala\n99. Back",
-        "french": "Choisissez la ville :\n1. Yaoundé\n2. Douala\n99. Retour",
-    },
+    # City menus are now dynamic — no need to hardcode
+    # Use build_city_menu_text(CITIES[country], lang) in ussd.py
     "risk_low": {
         "pidgin": "Low flood risk. Small rain dey come, but no worry.",
         "english": "Low flood risk. Light rain expected, stay safe.",
