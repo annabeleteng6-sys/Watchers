@@ -31,13 +31,13 @@ def build_city_menu(country: str, lang: str) -> str:
     return MESSAGES["choose_city"]["french"] if lang == "french" else MESSAGES["choose_city"]["english_cm"]
 
 
-async def ussd_handler(payload: dict) -> dict:
+async def ussd_handler(payload: dict) -> str:
     session_id = payload.get("sessionId")
     phone = payload.get("phoneNumber", "").lstrip("+")
     text = payload.get("text", "").strip()
 
     if not session_id or not phone:
-        return {"response": "END Service unavailable. Try again later."}
+        return "END Service unavailable. Try again later."
 
     country = detect_country(phone)
     if text == "":
@@ -46,27 +46,30 @@ async def ussd_handler(payload: dict) -> dict:
     session = get_ussd_session(session_id, phone, country)
     lang = resolve_language(country, session.lang)
 
+    # Start
     if session.step == "start":
         welcome_key = "pidgin" if lang == "pidgin" else "english"
         session.step = "choose_lang" if country == "cameroon" else "choose_city"
         update_ussd_session(session)
-        return {"response": "CON " + MESSAGES["welcome"][welcome_key]}
+        return "CON " + MESSAGES["welcome"][welcome_key]
 
+    # Language selection (Cameroon)
     if session.step == "choose_lang":
         if text in ["1", "2"]:
             session.lang = "french" if text == "1" else "english"
             session.step = "choose_city"
             update_ussd_session(session)
-            return {"response": "CON " + build_city_menu(country, session.lang)}
-        return {"response": "CON " + MESSAGES["choose_lang"]["french"]}
+            return "CON " + build_city_menu(country, session.lang)
+        return "CON " + MESSAGES["choose_lang"]["french"]
 
+    # City selection
     if session.step == "choose_city":
         if text == "99":
             reset_ussd_session(session_id, phone, country)
-            return {"response": "CON " + MESSAGES["welcome"]["pidgin" if lang == "pidgin" else "english"]}
+            return "CON " + MESSAGES["welcome"]["pidgin" if lang == "pidgin" else "english"]
 
         if not text.isdigit() or not (1 <= int(text) <= 2):
-            return {"response": "CON " + build_city_menu(country, lang)}
+            return "CON " + build_city_menu(country, lang)
 
         city_idx = int(text) - 1
         city = list(CITIES[country].keys())[city_idx]
@@ -86,8 +89,9 @@ async def ussd_handler(payload: dict) -> dict:
             session.alert_sent = True
             update_ussd_session(session)
 
-        return {"response": "CON " + risk_msg + "\n\n" + menu}
+        return "CON " + risk_msg + "\n\n" + menu
 
+    # Post-risk menu
     if session.step == "post_risk":
         if text == "1":
             log_emergency_alert(
@@ -100,13 +104,14 @@ async def ussd_handler(payload: dict) -> dict:
             thanks = MESSAGES["danger_thanks"][lang]
             await send_sms_alert("+" + phone, f"🚨 EMERGENCY REPORTED\nLocation: {session.selected_city}\n{confirm}")
             reset_ussd_session(session_id, phone, country)
-            return {"response": "END " + confirm + "\n\n" + thanks}
+            return "END " + confirm + "\n\n" + thanks
 
         if text == "99":
             reset_ussd_session(session_id, phone, country)
-            return {"response": "CON " + MESSAGES["welcome"]["pidgin" if lang == "pidgin" else "english"]}
+            return "CON " + MESSAGES["welcome"]["pidgin" if lang == "pidgin" else "english"]
 
-        return {"response": "END Invalid option."}
+        return "END Invalid option."
 
+    # Fallback
     reset_ussd_session(session_id, phone, country)
-    return {"response": "END " + MESSAGES["end"][lang]}
+    return "END " + MESSAGES["end"][lang]

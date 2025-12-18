@@ -1,5 +1,3 @@
-# models.py
-
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from datetime import datetime
@@ -12,7 +10,7 @@ class USSDSession(SQLModel, table=True):
     step: str = "start"
     selected_city: Optional[str] = None
     temp_risk: Optional[str] = None
-    alert_sent: bool = False  # ← Added to prevent duplicate SMS
+    alert_sent: bool = False
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
 class EmergencyAlert(SQLModel, table=True):
