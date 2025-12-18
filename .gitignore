@@ -1,0 +1,46 @@
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ---------------- Virtual Environments ----------------
+venv/
+env/
+.venv/
+
+# ---------------- Environment Variables ----------------
+.env
+.env.*
+*.env
+
+# ---------------- Databases ----------------
+*.db
+*.sqlite3
+
+# ---------------- Logs ----------------
+*.log
+
+# ---------------- OS / Editor ----------------
+.DS_Store
+Thumbs.db
+
+# ---------------- IDEs ----------------
+.vscode/
+.idea/
+*.iml
+
+# ---------------- Testing ----------------
+.pytest_cache/
+.coverage
+
+# ---------------- Ngrok ----------------
+ngrok.yml
+
+
+
+# ---------------- Secrets ----------------
+config/local.py
